@@ -313,7 +313,7 @@ say_recipe 'git'
 say_wizard "initialize git"
 prefs[:git] = true unless prefs.has_key? :git
 if prefer :git, true
-  copy_from 'https://raw.github.com/RailsApps/rails-composer/master/files/gitignore.txt', '.gitignore'
+  copy_from 'https://raw.github.com/KolomoetsOleg/rails_template/tree/master/files/gitignore.txt', '.gitignore'
   git :init
   git :add => '-A'
   git :commit => '-qm "rails_apps_composer: initial commit"'
@@ -456,83 +456,83 @@ append_file "README", "PREFERENCES\n#{prefs.inspect}"
 # >---------------------------- recipes/setup.rb -----------------------------end<
 # >-------------------------- templates/recipe.erb ---------------------------end<
 
-# >-------------------------- templates/recipe.erb ---------------------------start<
-# >--------------------------------[ readme ]---------------------------------<
-@current_recipe = "readme"
-@before_configs["readme"].call if @before_configs["readme"]
-say_recipe 'readme'
-@configs[@current_recipe] = config
-# >---------------------------- recipes/readme.rb ----------------------------start<
-
-# Application template recipe for the rails_apps_composer. Change the recipe here:
-# https://github.com/RailsApps/rails_apps_composer/blob/master/recipes/readme.rb
-
-after_everything do
-  say_wizard "recipe running after everything"
-
-  # remove default READMEs
-  %w{
-    README
-    README.rdoc
-    doc/README_FOR_APP
-  }.each { |file| remove_file file }
-
-  # add placeholder READMEs and humans.txt file
-  copy_from_repo 'public/humans.txt'
-  copy_from_repo 'README'
-  copy_from_repo 'README.textile'
-  gsub_file "README", /App_Name/, "#{app_name.humanize.titleize}"
-  gsub_file "README.textile", /App_Name/, "#{app_name.humanize.titleize}"
-
-  # Diagnostics
-  gsub_file "README.textile", /recipes that are known/, "recipes that are NOT known" if diagnostics[:recipes] == 'fail'
-  gsub_file "README.textile", /preferences that are known/, "preferences that are NOT known" if diagnostics[:prefs] == 'fail'
-  gsub_file "README.textile", /RECIPES/, recipes.sort.inspect
-  gsub_file "README.textile", /PREFERENCES/, prefs.inspect
-  gsub_file "README", /RECIPES/, recipes.sort.inspect
-  gsub_file "README", /PREFERENCES/, prefs.inspect
-
-  # Ruby on Rails
-  gsub_file "README.textile", /\* Ruby/, "* Ruby version #{RUBY_VERSION}"
-  gsub_file "README.textile", /\* Rails/, "* Rails version #{Rails::VERSION::STRING}"
-
-  # Database
-  gsub_file "README.textile", /SQLite/, "PostgreSQL" if prefer :database, 'postgresql'
-  gsub_file "README.textile", /SQLite/, "MySQL" if prefer :database, 'mysql'
-
-  # Template Engine
-  gsub_file "README.textile", /ERB/, "Haml" if prefer :templates, 'haml'
-
-  # Testing Framework
-  gsub_file "README.textile", /Test::Unit/, "RSpec" if prefer :unit_test, 'rspec'
-  gsub_file "README.textile", /RSpec/, "RSpec and Cucumber" if prefer :integration, 'cucumber'
-  gsub_file "README.textile", /RSpec/, "RSpec and Factory Girl" if prefer :fixtures, 'factory_girl'
-
-  # Front-end Framework
-  gsub_file "README.textile", /Front-end Framework: None/, "Front-end Framework: Twitter Bootstrap 2.3 (Sass)" if prefer :frontend, 'bootstrap2'
-  gsub_file "README.textile", /Front-end Framework: None/, "Front-end Framework: Twitter Bootstrap 3.0 (Sass)" if prefer :frontend, 'bootstrap3'
-
-  # Form Builder
-  gsub_file "README.textile", /Form Builder: None/, "Form Builder: SimpleForm" if prefer :form_builder, 'simple_form'
-
-  # Email
-  unless prefer :email, 'none'
-    gsub_file "README.textile", /Gmail/, "SMTP" if prefer :email, 'smtp'
-  else
-    gsub_file "README.textile", /h2. Email/, ""
-    gsub_file "README.textile", /The application is configured to send email using a Gmail account./, ""
-  end
-
-  # Authentication and Authorization
-  gsub_file "README.textile", /Authentication: None/, "Authentication: Devise" if prefer :authentication, 'devise'
-  gsub_file "README.textile", /Authorization: None/, "Authorization: CanCan" if prefer :authorization, 'cancan'
-
-  git :add => '-A' if prefer :git, true
-  git :commit => '-qm "rails_apps_composer: add README files"' if prefer :git, true
-
-end # after_everything
-# >---------------------------- recipes/readme.rb ----------------------------end<
-# >-------------------------- templates/recipe.erb ---------------------------end<
+## >-------------------------- templates/recipe.erb ---------------------------start<
+## >--------------------------------[ readme ]---------------------------------<
+#@current_recipe = "readme"
+#@before_configs["readme"].call if @before_configs["readme"]
+#say_recipe 'readme'
+#@configs[@current_recipe] = config
+## >---------------------------- recipes/readme.rb ----------------------------start<
+#
+## Application template recipe for the rails_apps_composer. Change the recipe here:
+## https://github.com/RailsApps/rails_apps_composer/blob/master/recipes/readme.rb
+#
+#after_everything do
+#  say_wizard "recipe running after everything"
+#
+#  # remove default READMEs
+#  %w{
+#    README
+#    README.rdoc
+#    doc/README_FOR_APP
+#  }.each { |file| remove_file file }
+#
+#  # add placeholder READMEs and humans.txt file
+#  copy_from_repo 'public/humans.txt'
+#  copy_from_repo 'README'
+#  copy_from_repo 'README.textile'
+#  gsub_file "README", /App_Name/, "#{app_name.humanize.titleize}"
+#  gsub_file "README.textile", /App_Name/, "#{app_name.humanize.titleize}"
+#
+#  # Diagnostics
+#  gsub_file "README.textile", /recipes that are known/, "recipes that are NOT known" if diagnostics[:recipes] == 'fail'
+#  gsub_file "README.textile", /preferences that are known/, "preferences that are NOT known" if diagnostics[:prefs] == 'fail'
+#  gsub_file "README.textile", /RECIPES/, recipes.sort.inspect
+#  gsub_file "README.textile", /PREFERENCES/, prefs.inspect
+#  gsub_file "README", /RECIPES/, recipes.sort.inspect
+#  gsub_file "README", /PREFERENCES/, prefs.inspect
+#
+#  # Ruby on Rails
+#  gsub_file "README.textile", /\* Ruby/, "* Ruby version #{RUBY_VERSION}"
+#  gsub_file "README.textile", /\* Rails/, "* Rails version #{Rails::VERSION::STRING}"
+#
+#  # Database
+#  gsub_file "README.textile", /SQLite/, "PostgreSQL" if prefer :database, 'postgresql'
+#  gsub_file "README.textile", /SQLite/, "MySQL" if prefer :database, 'mysql'
+#
+#  # Template Engine
+#  gsub_file "README.textile", /ERB/, "Haml" if prefer :templates, 'haml'
+#
+#  # Testing Framework
+#  gsub_file "README.textile", /Test::Unit/, "RSpec" if prefer :unit_test, 'rspec'
+#  gsub_file "README.textile", /RSpec/, "RSpec and Cucumber" if prefer :integration, 'cucumber'
+#  gsub_file "README.textile", /RSpec/, "RSpec and Factory Girl" if prefer :fixtures, 'factory_girl'
+#
+#  # Front-end Framework
+#  gsub_file "README.textile", /Front-end Framework: None/, "Front-end Framework: Twitter Bootstrap 2.3 (Sass)" if prefer :frontend, 'bootstrap2'
+#  gsub_file "README.textile", /Front-end Framework: None/, "Front-end Framework: Twitter Bootstrap 3.0 (Sass)" if prefer :frontend, 'bootstrap3'
+#
+#  # Form Builder
+#  gsub_file "README.textile", /Form Builder: None/, "Form Builder: SimpleForm" if prefer :form_builder, 'simple_form'
+#
+#  # Email
+#  unless prefer :email, 'none'
+#    gsub_file "README.textile", /Gmail/, "SMTP" if prefer :email, 'smtp'
+#  else
+#    gsub_file "README.textile", /h2. Email/, ""
+#    gsub_file "README.textile", /The application is configured to send email using a Gmail account./, ""
+#  end
+#
+#  # Authentication and Authorization
+#  gsub_file "README.textile", /Authentication: None/, "Authentication: Devise" if prefer :authentication, 'devise'
+#  gsub_file "README.textile", /Authorization: None/, "Authorization: CanCan" if prefer :authorization, 'cancan'
+#
+#  git :add => '-A' if prefer :git, true
+#  git :commit => '-qm "rails_apps_composer: add README files"' if prefer :git, true
+#
+#end # after_everything
+## >---------------------------- recipes/readme.rb ----------------------------end<
+## >-------------------------- templates/recipe.erb ---------------------------end<
 
 # >-------------------------- templates/recipe.erb ---------------------------start<
 # >---------------------------------[ gems ]----------------------------------<
@@ -606,7 +606,7 @@ if config['apipie']
 end
 
 add_gem 'api-versions' if prefs[:apiversions]
-add_gem 'apipie' if prefs[:apipie]
+add_gem 'apipie-rails' if prefs[:apipie]
 
 
 ## Template Engine
@@ -1034,7 +1034,7 @@ after_bundler do
     end
   end
   ##APIpie
-  if prefer[:apipie]
+  if prefs[:apipie]
     generate 'apipie:install'
   end
   ## DEVISE AND CUCUMBER
