@@ -1,3 +1,3 @@
-server '<server address>', :app, :web, :db, :primary => true
-set :branch, '<branch for staging>'
+server '<server_address>', :app, :web, :db, :primary => true
+set :branch, '<branch_for_staging>'
 set :deploy_to, "/var/www/#{application}"
