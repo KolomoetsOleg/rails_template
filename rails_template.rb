@@ -110,10 +110,7 @@ def add_gem(*all) Gemfile.add(*all); end
                         ["controllers", "email", "example", "extras", "frontend", "gems", "git", "init", "models", "prelaunch", "railsapps", "readme", "routes", "setup", "testing", "views"],
                         ["controllers", "email", "example", "extras", "frontend", "gems", "git", "init", "models", "prelaunch", "railsapps", "readme", "routes", "saas", "setup", "testing", "views"],
                         ["apps4", "controllers", "core", "email", "extras", "frontend", "gems", "git", "init", "models", "prelaunch", "railsapps", "readme", "routes", "saas", "setup", "testing", "views"]]
-@diagnostics_prefs = [{:railsapps=>"none", :database=>"sqlite", :unit_test=>"rspec", :integration=>"rspec-capybara", :fixtures=>"factory_girl", :frontend=>"bootstrap", :bootstrap=>"sass", :email=>"none", :authentication=>"devise", :authorization=>"cancan", :form_builder=>"none", :starter_app=>"admin_app", :capistrano => false, :apiversions => false, :apipie => false},
-                      {:railsapps=>"none", :database=>"sqlite", :unit_test=>"rspec", :integration=>"cucumber", :fixtures=>"none", :frontend=>"bootstrap", :bootstrap=>"sass", :email=>"gmail", :authentication=>"devise", :devise_modules=>"invitable", :authorization=>"cancan", :form_builder=>"simple_form", :starter_app=>"admin_app", :capistrano => false, :apiversions => false, :apipie => false},
-                      {:railsapps=>"none", :database=>"sqlite", :unit_test=>"rspec", :integration=>"cucumber", :fixtures=>"factory_girl", :frontend=>"bootstrap", :bootstrap=>"sass", :email=>"gmail", :authentication=>"devise", :devise_modules=>"default", :authorization=>"cancan", :form_builder=>"none", :starter_app=>"admin_app", :capistrano => false, :apiversions => false, :apipie => false},
-                      {:railsapps=>"none", :database=>"sqlite", :unit_test=>"test_unit", :integration=>"none", :fixtures=>"none", :frontend=>"bootstrap", :bootstrap=>"less", :email=>"gmail", :authentication=>"devise", :devise_modules=>"confirmable", :authorization=>"cancan", :form_builder=>"none", :starter_app=>"admin_app", :capistrano => false, :apiversions => false, :apipie => false}]
+@diagnostics_prefs = [{:railsapps=>"none", :database=>"sqlite", :prod_database => "sqlite", :unit_test=>"rspec", :integration=>"rspec-capybara", :fixtures=>"factory_girl", :frontend=>"bootstrap", :bootstrap=>"sass", :email=>"none", :authentication=>"devise", :authorization=>"cancan", :form_builder=>"none", :starter_app=>"admin_app", :capistrano => false, :resque => false, :apiversions => false, :apipie => false}]
 diagnostics = {}
 
 # >-------------------------- templates/helpers.erb --------------------------start<
@@ -313,7 +310,7 @@ say_recipe 'git'
 say_wizard "initialize git"
 prefs[:git] = true unless prefs.has_key? :git
 if prefer :git, true
-  copy_from 'https://raw.github.com/KolomoetsOleg/rails_template/tree/master/files/gitignore.txt', '.gitignore'
+  copy_from 'https://raw.github.com/KolomoetsOleg/rails_template/master/files/gitignore.txt', '.gitignore'
   git :init
   git :add => '-A'
   git :commit => '-qm "rails_template: initial commit"'
@@ -386,6 +383,9 @@ prefs[:prod_webserver] = multiple_choice "Web server for production?", [["Unicor
 ## Database Adapter
 prefs[:database] = multiple_choice "Database used in development?", [["SQLite", "sqlite"], ["PostgreSQL", "postgresql"],
                                                                      ["MySQL", "mysql"]] unless prefs.has_key? :database
+## Production Database Adapter
+prefs[:prod_database] = multiple_choice "Database used in production?", [["SQLite", "sqlite"], ["PostgreSQL", "postgresql"],
+                                                                         ["MySQL", "mysql"]] unless prefs.has_key? :prod_database
 
 ## Template Engine
 prefs[:templates] = multiple_choice "Template engine?", [["ERB", "erb"], ["Haml", "haml"]] unless prefs.has_key? :templates
@@ -443,8 +443,17 @@ if (recipes.include? 'models') && (recipes.include? 'controllers') && (recipes.i
   end
 end
 
+## Paperclip
+
+say_wizard ("Check do you have image magick or not!!!! ")
+run "identify -version"
+
 ##Deploing web application
 config['capistrano'] = yes_wizard?("Install capistrano?") if true && true unless prefs.has_key? :capistrano
+
+## Resque AND Resque_mailer
+config['resque'] = yes_wizard?("Do you want to install resque and resque_mailer?") if true && true unless prefs.has_key? :resque
+
 
 ##APIVirsions and APIpie
 config['apiversions'] = yes_wizard?("Install API Versions?") if true && true unless prefs.has_key? :apiversions
@@ -562,25 +571,42 @@ add_gem 'unicorn', :group => [:development, :test] if prefer :dev_webserver, 'un
 case prefs[:prod_webserver]
   when 'unicorn_nginx'
     add_gem 'unicorn', :group => :production
-    copy_from_repo 'config/unicorn.rb'
+    add_gem 'capistrano-unicorn', :group => :development, :require => false
+    copy_from_repo 'config/unicorn-unicorn_nginx.rb', :prefs => 'unicorn_nginx'
+    copy_from_repo 'config/deploy-unicorn_nginx.rb', :prefs => 'unicorn_nginx' if config['capistrano']
   when 'unicorn_apache'
     add_gem 'unicorn', :group => :production
+    add_gem 'capistrano-unicorn', :group => :development, :require => false
+    copy_from_repo 'config/unicorn-unicorn_apache.rb', :prefs => 'unicorn_apache'
+    copy_from_repo 'config/deploy-unicorn_apache.rb', :prefs => 'unicorn_apache' if config['capistrano']
   when 'passenger_nginx'
     add_gem 'passenger', :group => :production
+    copy_from_repo 'config/unicorn.rb'
+    copy_from_repo 'config/deploy-unicorn_apache.rb' if config['capistrano']
   when 'passenger_apache'
     add_gem 'passenger', :group => :production
+    copy_from_repo 'config/unicorn.rb'
+    copy_from_repo 'config/deploy.rb' if config['capistrano']
 
 end
+
 
 
 ## Database Adapter
-unless prefer :database, 'default'
-  gsub_file 'Gemfile', /gem 'sqlite3'\n/, '' unless prefer :database, 'sqlite'
-end
+
+## Development Database Adapter
+gsub_file 'Gemfile', /gem 'sqlite3'\n/, '' unless prefer :database, 'sqlite'
 gsub_file 'Gemfile', /gem 'pg'.*/, ''
 add_gem 'pg' if prefer :database, 'postgresql'
 gsub_file 'Gemfile', /gem 'mysql2'.*/, ''
 add_gem 'mysql2' if prefer :database, 'mysql'
+
+## Production Database Adapter
+gsub_file 'Gemfile', /gem 'sqlite3'\n/, '' unless prefer :prod_database, 'sqlite'
+gsub_file 'Gemfile', /gem 'pg'.*/, ''
+add_gem 'pg', :group => [:production] if prefer :prod_database, 'postgresql'
+gsub_file 'Gemfile', /gem 'mysql2'.*/, ''
+add_gem 'mysql2', :group => [:production] if prefer :prod_database, 'mysql'
 
 ##Capistrano
 if config['capistrano']
@@ -591,9 +617,26 @@ if prefs[:capistrano]
   add_gem 'capistrano', :group => [:development]
   add_gem 'capistrano-ext', :group => [:development]
   add_gem 'rvm-capistrano', :group => [:development]
-  copy_from_repo 'config/deploy.rb'
+  add_gem 'capistrano-unicorn', :group => [:development], :require => false
   copy_from_repo 'config/deploy/production.rb'
   copy_from_repo 'config/deploy/staging.rb'
+  server_name = prefs[:server_name] || ask_wizard("Enter server name for deploy:")
+  gsub_file 'config/deploy/production.rb', /<server_address>/, server_name
+  gsub_file 'config/deploy/staging.rb', /<server_address>/, server_name
+  branch_name = prefs[:branch_name] || ask_wizard("Enter branch name for deploy:")
+  gsub_file 'config/deploy/production.rb', /<branch_for_staging>/, branch_name
+  gsub_file 'config/deploy/staging.rb', /<branch_for_staging>/, branch_name
+  run "capify ."
+end
+
+## REsque and Resque_mailer
+if config['resque']
+  prefs[:resque] = true
+end
+
+if prefs[:resque]
+  add_gem 'resque'
+  add_gem 'resque_mailer'
 end
 
 
@@ -607,6 +650,8 @@ end
 
 add_gem 'api-versions' if prefs[:apiversions]
 add_gem 'apipie-rails' if prefs[:apipie]
+
+add_gem 'bcrypt-ruby'
 
 
 ## Template Engine
@@ -663,55 +708,114 @@ git :commit => '-qm "rails_template: Gemfile"' if prefer :git, true
 
 ### CREATE DATABASE ###
 after_bundler do
-  unless prefer :database, 'default'
-    copy_from_repo 'config/database-postgresql.yml', :prefs => 'postgresql'
-    copy_from_repo 'config/database-mysql.yml', :prefs => 'mysql'
-    if prefer :database, 'postgresql'
-      begin
-        pg_username = prefs[:pg_username] || ask_wizard("Username for PostgreSQL?(leave blank to use the app name)")
-        if pg_username.blank?
-          say_wizard "Creating a user named '#{app_name}' for PostgreSQL"
-          run "createuser #{app_name}" if prefer :database, 'postgresql'
-          gsub_file "config/database.yml", /username: .*/, "username: #{app_name}"
-        else
-          gsub_file "config/database.yml", /username: .*/, "username: #{pg_username}"
-          pg_password = prefs[:pg_password] || ask_wizard("Password for PostgreSQL user #{pg_username}?")
-          gsub_file "config/database.yml", /password:/, "password: #{pg_password}"
-          say_wizard "set config/database.yml for username/password #{pg_username}/#{pg_password}"
-        end
-      rescue StandardError => e
-        raise "unable to create a user for PostgreSQL, reason: #{e}"
-      end
-      gsub_file "config/database.yml", /database: myapp_development/, "database: #{app_name}_development"
-      gsub_file "config/database.yml", /database: myapp_test/,        "database: #{app_name}_test"
-      gsub_file "config/database.yml", /database: myapp_production/,  "database: #{app_name}_production"
-    end
-    if prefer :database, 'mysql'
-      mysql_username = prefs[:mysql_username] || ask_wizard("Username for MySQL? (leave blank to use the app name)")
-      if mysql_username.blank?
+  copy_from_repo 'config/database-postgresql.yml', :prefs => 'postgresql' if prefer :database, 'postgresql'
+  copy_from_repo 'config/database-mysql.yml', :prefs => 'mysql' if prefer :database, 'mysql'
+
+  if prefer :database, 'sqlite'
+    config =  <<-TEXT
+
+production:
+  adapter: sqlite3
+  database: db/production.sqlite3
+  pool: 5
+  timeout: 5000
+    TEXT
+
+    gsub_file 'config/database.yml', config, ""
+  end
+
+  case prefs[:prod_database]
+    when  'postgresql'
+      config = <<-TEXT
+
+production:
+  adapter:  postgresql
+  host:     localhost
+  encoding: unicode
+  database: myapp_production
+  pool:     5
+  username: myapp
+  password:
+  template: template0
+
+      TEXT
+      append_to_file  'config/database.yml', config
+
+    when 'mysql'
+      config = <<-TEXT
+
+production:
+  adapter: mysql2
+  encoding: utf8
+  reconnect: false
+  database: myapp_production
+  pool: 5
+  username: root
+  password:
+  host: localhost
+      TEXT
+      append_to_file  'config/database.yml', config
+    when 'sqlite'
+      config = <<-TEXT
+
+production:
+  adapter: sqlite3
+  database: db/production.sqlite3
+  pool: 5
+  timeout: 5000
+      TEXT
+      append_to_file  'config/database.yml', config
+    else
+      say_wizard "Something went wrong"
+  end
+
+  if prefer :database, 'postgresql'
+    begin
+      pg_username = prefs[:pg_username] || ask_wizard("Username for PostgreSQL?(leave blank to use the app name)")
+      if pg_username.blank?
+        say_wizard "Creating a user named '#{app_name}' for PostgreSQL"
+        run "createuser #{app_name}" if prefer :database, 'postgresql'
         gsub_file "config/database.yml", /username: .*/, "username: #{app_name}"
       else
-        gsub_file "config/database.yml", /username: .*/, "username: #{mysql_username}"
-        mysql_password = prefs[:mysql_password] || ask_wizard("Password for MySQL user #{mysql_username}?")
-        gsub_file "config/database.yml", /password:/, "password: #{mysql_password}"
-        say_wizard "set config/database.yml for username/password #{mysql_username}/#{mysql_password}"
+        gsub_file "config/database.yml", /username: .*/, "username: #{pg_username}"
+        pg_password = prefs[:pg_password] || ask_wizard("Password for PostgreSQL user #{pg_username}?")
+        gsub_file "config/database.yml", /password:/, "password: #{pg_password}"
+        say_wizard "set config/database.yml for username/password #{pg_username}/#{pg_password}"
       end
-      gsub_file "config/database.yml", /database: myapp_development/, "database: #{app_name}_development"
-      gsub_file "config/database.yml", /database: myapp_test/,        "database: #{app_name}_test"
-      gsub_file "config/database.yml", /database: myapp_production/,  "database: #{app_name}_production"
+    rescue StandardError => e
+      raise "unable to create a user for PostgreSQL, reason: #{e}"
     end
-    unless prefer :database, 'sqlite'
-      if (prefs.has_key? :drop_database) ? prefs[:drop_database] :
-          (yes_wizard? "Okay to drop all existing databases named #{app_name}? 'No' will abort immediately!")
-        run 'rake db:drop'
-      else
-        raise "aborted at user's request"
-      end
-    end
-    ## Git
-    git :add => '-A' if prefer :git, true
-    git :commit => '-qm "rails_template: create database"' if prefer :git, true
+    gsub_file "config/database.yml", /database: myapp_development/, "database: #{app_name}_development"
+    gsub_file "config/database.yml", /database: myapp_test/,        "database: #{app_name}_test"
+    gsub_file "config/database.yml", /database: myapp_production/,  "database: #{app_name}_production"
   end
+
+
+  if prefer :database, 'mysql'
+    mysql_username = prefs[:mysql_username] || ask_wizard("Username for MySQL? (leave blank to use the app name)")
+    if mysql_username.blank?
+      gsub_file "config/database.yml", /username: .*/, "username: #{app_name}"
+    else
+      gsub_file "config/database.yml", /username: .*/, "username: #{mysql_username}"
+      mysql_password = prefs[:mysql_password] || ask_wizard("Password for MySQL user #{mysql_username}?")
+      gsub_file "config/database.yml", /password:/, "password: #{mysql_password}"
+      say_wizard "set config/database.yml for username/password #{mysql_username}/#{mysql_password}"
+    end
+    gsub_file "config/database.yml", /database: myapp_development/, "database: #{app_name}_development"
+    gsub_file "config/database.yml", /database: myapp_test/,        "database: #{app_name}_test"
+    gsub_file "config/database.yml", /database: myapp_production/,  "database: #{app_name}_production"
+  end
+  unless prefer :database, 'sqlite'
+    if (prefs.has_key? :drop_database) ? prefs[:drop_database] :
+        (yes_wizard? "Okay to drop all existing databases named #{app_name}? 'No' will abort immediately!")
+      run 'rake db:drop'
+    else
+      raise "aborted at user's request"
+    end
+  end
+  ## Git
+  git :add => '-A' if prefer :git, true
+  git :commit => '-qm "rails_template: create database"' if prefer :git, true
 end # after_bundler
 
 ### GENERATORS ###
