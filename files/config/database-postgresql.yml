@@ -49,13 +49,3 @@ test:
   username: myapp
   password:
   template: template0
-
-production:
-  adapter:  postgresql
-  host:     localhost
-  encoding: unicode
-  database: myapp_production
-  pool:     5
-  username: myapp
-  password:
-  template: template0
