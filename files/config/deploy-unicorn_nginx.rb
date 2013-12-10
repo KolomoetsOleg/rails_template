@@ -15,7 +15,7 @@ set :unicorn_conf, "#{deploy_to}/current/config/unicorn.rb"
 set :unicorn_pid, "#{deploy_to}/tmp/pids/unicorn.pid"
 
 set :scm, :git
-set :repository, "git@github.com:KolomoetsOleg/unicorn_nginx.git"
+set :repository, "<Repository>"
 set :branch, "master"
 set :deploy_via, :remote_cache
 
