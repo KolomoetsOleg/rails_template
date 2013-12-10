@@ -443,10 +443,6 @@ if (recipes.include? 'models') && (recipes.include? 'controllers') && (recipes.i
   end
 end
 
-## Paperclip
-
-say_wizard ("Check do you have image magick or not!!!! ")
-run "identify -version"
 
 ##Deploing web application
 config['capistrano'] = yes_wizard?("Install capistrano?") if true && true unless prefs.has_key? :capistrano
@@ -602,7 +598,7 @@ gsub_file 'Gemfile', /gem 'mysql2'.*/, ''
 add_gem 'mysql2' if prefer :database, 'mysql'
 
 ## Production Database Adapter
-gsub_file 'Gemfile', /gem 'sqlite3'\n/, '' unless prefer :prod_database, 'sqlite'
+gsub_file 'Gemfile', /gem 'sqlite3'\n/, '' unless prefer :database, 'sqlite'
 gsub_file 'Gemfile', /gem 'pg'.*/, ''
 add_gem 'pg', :group => [:production] if prefer :prod_database, 'postgresql'
 gsub_file 'Gemfile', /gem 'mysql2'.*/, ''
