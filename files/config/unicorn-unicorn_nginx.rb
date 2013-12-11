@@ -12,7 +12,7 @@ stderr_path rails_root+"/tmp/log/unicorn.stderr.log" # File for error log
 timeout 30
 worker_processes 1 # You can change it depending on the load
 listen socket_file, :backlog => 1024
-                                         # listen 8080 # Uncomment this line and comment line above if you want unicorn to listen port, not socket
+# listen 8080 # Uncomment this line and comment line above if you want unicorn to listen port, not socket
 
 
 preload_app true # Process loads the application, before the produce workflows.

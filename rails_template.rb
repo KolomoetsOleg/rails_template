@@ -1036,11 +1036,24 @@ say_recipe 'email'
 
 after_bundler do
   say_wizard "recipe running after 'bundle install'"
-  unless prefer :email, 'none'
+  if prefer :email, 'none'
+    send_email_text = <<-TEXT
+
+  # Send email in development mode.
+  config.action_mailer.perform_deliveries = true
+  config.action_mailer.default_url_options = { :host => 'localhost:3000' }
+    TEXT
+    inject_into_file 'config/environments/development.rb', send_email_text, :after => "config.assets.debug = true"
+  end
+
+
+  if prefer :email, 'smtp'
     if rails_4?
       send_email_text = <<-TEXT
-        # Send email in development mode.
-        config.action_mailer.perform_deliveries = true
+
+  # Send email in development mode.
+  config.action_mailer.perform_deliveries = true
+  config.action_mailer.default_url_options = { :host => 'localhost:3000' }
       TEXT
       inject_into_file 'config/environments/development.rb', send_email_text, :after => "config.assets.debug = true"
     else
@@ -1384,44 +1397,47 @@ ADMIN_PASSWORD: changeme
   ### DATABASE SEED ###
   if prefs[:local_env_file]
     append_file 'db/seeds.rb' do <<-FILE
-      # Environment variables (ENV['...']) can be set in the file config/application.yml.
-      # See http://railsapps.github.io/rails-environment-variables.html
+# Environment variables (ENV['...']) can be set in the file config/application.yml.
+# See http://railsapps.github.io/rails-environment-variables.html
     FILE
     end
   end
   if (prefer :authorization, 'cancan')
     append_file 'db/seeds.rb' do <<-FILE
-      puts 'ROLES'
-      YAML.load(ENV['ROLES']).each do |role|
-        Role.find_or_create_by_name({ :name => role }, :without_protection => true)
-        puts 'role: ' << role
-      end
+puts 'ROLES'
+YAML.load(ENV['ROLES']).each do |role|
+  Role.find_or_create_by_name({ :name => role }, :without_protection => true)
+  puts 'role: ' << role
+end
     FILE
     end
     ## Fix db seed for Rails 4.0
     gsub_file 'db/seeds.rb', /{ :name => role }, :without_protection => true/, 'role' if rails_4?
   else
     append_file 'db/seeds.rb' do <<-FILE
-      puts 'ROLES'
-      YAML.load(ENV['ROLES']).each do |role|
-        Role.mongo_session['roles'].insert({ :name => role })
-        puts 'role: ' << role
-      end
+puts 'ROLES'
+YAML.load(ENV['ROLES']).each do |role|
+  Role.mongo_session['roles'].insert({ :name => role })
+  puts 'role: ' << role
+end
     FILE
     end
   end
   ## DEVISE-DEFAULT
   if prefer :authentication, 'devise'
     append_file 'db/seeds.rb' do <<-FILE
-      puts 'DEFAULT USERS'
-      user = User.find_or_create_by_email :name => ENV['ADMIN_NAME'].dup, :email => ENV['ADMIN_EMAIL'].dup, :password => ENV['ADMIN_PASSWORD'].dup, :password_confirmation => ENV['ADMIN_PASSWORD'].dup
-      puts 'user: ' << user.name
+puts 'DEFAULT USERS'
+user = User.find_or_create_by_email :name => ENV['ADMIN_NAME'].dup, :email => ENV['ADMIN_EMAIL'].dup, :password => ENV['ADMIN_PASSWORD'].dup, :password_confirmation => ENV['ADMIN_PASSWORD'].dup
+puts 'user: ' << user.name
     FILE
     end
   end
   ## DEVISE-CONFIRMABLE
   if (prefer :devise_modules, 'confirmable') || (prefer :devise_modules, 'invitable')
     append_file 'db/seeds.rb', "user.confirm!\n"
+  end
+  if (prefer :authorization, 'cancan')
+    append_file 'db/seeds.rb', 'user.add_role :admin'
   end
   ## DEVISE-INVITABLE
   if prefer :devise_modules, 'invitable'
@@ -1469,7 +1485,7 @@ end # after_everything
 say_recipe 'extras'
 config = {}
 config['ban_spiders'] = yes_wizard?("Set a robots.txt file to ban spiders?") if true && true unless config.key?('ban_spiders') || prefs.has_key?(:ban_spiders)
-config['git_rep'] = yes_wizard?("Create a Git repository?") if true && true unless config.key?('git_rep') || prefs.has_key?(:git_rep)
+#config['git_rep'] = yes_wizard?("Create a Git repository?") if true && true unless config.key?('git_rep') || prefs.has_key?(:git_rep)
 config['local_env_file'] = yes_wizard?("Use application.yml file for environment variables?") if true && true unless config.key?('local_env_file') || prefs.has_key?(:local_env_file)
 config['quiet_assets'] = yes_wizard?("Reduce assets logger noise during development?") if true && true unless config.key?('quiet_assets') || prefs.has_key?(:quiet_assets)
 config['better_errors'] = yes_wizard?("Improve error reporting with 'better_errors' during development?") if true && true unless config.key?('better_errors') || prefs.has_key?(:better_errors)
@@ -1655,6 +1671,7 @@ end
 # >-----------------------------[ Run 'Bundle Install' ]-------------------------------<
 
 say_wizard "Installing gems. This will take a while."
+run 'gem install bundler' if prefs[:rvmrc]
 run 'bundle install --without production'
 say_wizard "Updating gem paths."
 Gem.clear_paths
